@@ -25,7 +25,7 @@ The architecture of SMFFDDG consists of three main components:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/PengjiaMa23/smffddg.git
+git clone https://github.com/PengjiaMa23/smffddg_v1.git
 cd smffddg
 ```
 
