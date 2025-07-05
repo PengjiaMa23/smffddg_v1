@@ -1,0 +1,62 @@
+模型介绍
+
+环境配置
+需要进行smffdg的环境配置以及smffddg在提取局部特征时依赖的工具NetSurfP的环境配置
+（1）smffdg环境配置
+cd smffddg
+conda env create -f environment.yml
+（2）NetSurfP环境配置
+
+
+进行特征提取时，我们要先使用NetSurfP来获取残基的结构信息，NetSurfP的使用请参照https://services.healthtech.dtu.dk/services/NetSurfP-3.0/，选择Downloads选择Version 3.0版本下载本地
+由于该工具的代码需要学术申请，因此本项目中不提供NetSurfP的代码，当您完成申请并获得代码后请将其解压到./smffddg目录下，解压完成后其项目路径应为smffddg/netsurfp-3.0/NetSurfP-3.0_standalone/
+cd netsurfp-3.0/NetSurfP-3.0_standalone/
+conda env create --file environment.yml
+conda activate nsp3
+python setup.py install
+pip3 install -r requirements.txt
+
+
+请根据申请到的NetSurfP代码及其reamdme完成部署和环境配置，NetSurfP的输入为fasta文件，输出为fasta文件中每个序列对应的每个残基的结构信息
+
+
+1. 局部与整体特征提取
+
+输入格式：
+smffddg的输入格式参考./input/Myoglobin.csv，至少需要包含id,wt_seq,mut_seq,mut_info_Seq,pos_seq信息，exp_ddg列信息在训练模型时是必须的，在推理阶段可以不设置。
+
+特征处理过程如下：
+(1). 根据csv文件得到待测数据fasta文件,如果你已经提前整理好了fasta文件请忽略此步骤，示例命令如下
+python ./fea_process/set1_get_test_fasta.py ./input/Myoglobin.csv
+会得到对应的Myoglobin.fasta，位于./input目录下
+(2). 运行NetSurfP，需要NetSurfP和环境目录下执行，在示例命令如下
+conda
+cp
+python nsp3.py -m models/nsp3.pth -i ./SMFFDDG/input/Myoglobin.fasta -o Myoglobin
+
+执行完成后会在NetSurfP目录下生成Myoglobin/01子目录，包含了输入fasta中所有蛋白序列的残基结构预测
+
+(3). 提取对应突变残基的NetSurfP预测结果，执行set2_get_netsurfp_fea.py,--input_csv为待测数据的csv文件，--netsurfp_dir为待测数据的NetSurfP预测输出目录
+python ./fea_process/set2_get_netsurfp_fea.py --input_csv ./input/Myoglobin.csv --netsurfp_dir ptah/to/your/NetSurfP/output_dir/Myoglobin/01
+完成上述命令后我们会得到我们待测数据突变残基的结构信息，位于./netsurfp_fea目录下。
+
+(4). 执行特征提取工作，这一步我们会整合NetSurf所提取的突变残基结构信息以及氨基酸固有物理化学性质来组成局部残基特征，并使用ESM-2来获取整体变化特征，执行命令
+python /root/fssd/SMFFDDG/fea_process/set3_get_h5.py --dataset Myoglobin
+--dataset指的是input目录下的待测数据名称，在该步操作中，会计算待测数据正向突变（csv中数据默认为正向突变）和反向突变的局部和整体特征并存储在h5文件中，保存到./fea_process/h5_data/目录下
+
+
+2. 执行推理
+执行predict.py,命令如下：
+python predict.py --model_dir ./model --dataset Myoglobin --mutation_type d
+其中
+--model_dir为模型路径，这里默认为我们训练好的模型路径
+--dataset 为待测数据名称
+--mutation_type 为选择突变类型，即对于待测数据，可以计算正向突变、反向突变以及正反向突变的预测结果，d表示正向突变、r表示反向突变、both代表正反向突变
+最终结果会在/root/fssd/SMFFDDG/result目录下以待测数据名称命名的csv文件，例如./result/Myoglobin.csv，示例内容如下
+id,predicted_ddg
+1BZ6A_I28A_d,-0.10940446
+1BZ6A_L29A_d,-0.26374847
+1BZ6A_I30A_d,-1.070926
+1BZ6A_L32A_d,-0.607162
+其中id列的_d后缀表示为正向突变，-r后缀表示为反向突变，predicted_ddg列为smffddg预测的ddg
+
