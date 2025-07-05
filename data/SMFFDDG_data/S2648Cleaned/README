@@ -1,0 +1,9 @@
+The original S2648 dataset was checked for sequence similarity
+using: blastall -p blastp -i S2648.fasta -d S2648.fasta -m8 -e 0.01 -o S2648.All-vs-all.blast.e0.01 
+
+The blast output is: S2648.All-vs-all.blast.e0.01
+
+Then we clusterize the sequences using the connected components with edge at 25%
+The cluster is: S2648.cluster.25
+From this cluster, we generated a random partition that groups the proteins of the same cluster in the same set. 
+Finally, the resulting S2648 dataset is available at ./SMFFDDG_data/S2648_with_cluster_fold.csv, which includes a "fold" column to indicate the fold assignments.
